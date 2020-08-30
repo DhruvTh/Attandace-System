@@ -106,9 +106,9 @@ model=final([250,170,3])
 model.summary()
 
 def kloss(y_true,y_pred):
-    outa=y_pred[:,0:128]
-    outp=y_pred[:,128:128*2]
-    outn=y_pred[:,128*2:]
+    outa=y_pred[:,0:256]
+    outp=y_pred[:,256:256*2]
+    outn=y_pred[:,256*2:]
     loss1=K.sqrt(K.mean(K.square(outa-outp),axis=-1))
     loss2=K.sqrt(K.mean(K.square(outa-outn),axis=-1))
     l3=loss1-loss2+0.9
