@@ -15,15 +15,15 @@ npath=os.listdir('./negative/')
 ppath=os.listdir('./positive/')
 apath=os.listdir('./anchor/')
 tpath=os.listdir('./test/')
-xa=[]
-xt=[]
+xa1=[]
+xt1=[]
 xp=[]
 xn=[]
 for f in apath[1:]:
     a=cv2.imread('anchor/'+str(f))
     a=cv2.resize(a,(170,250))
     cv2.imwrite('anchor/'+str(f),a)
-    xa.append(a)
+    xa1.append(a)
 for f in ppath[1:]:
     a=cv2.imread('positive/'+str(f))
     a=cv2.resize(a,(170,250))
@@ -38,7 +38,21 @@ for f in tpath[1:]:
     a=cv2.imread('test/'+str(f))
     a=cv2.resize(a,(170,250))
     cv2.imwrite('test/'+str(f),a)
-    xt.append(a)
+    xt1.append(a)
+    
+xk=[]
+xa=[]
+for i in range(0,69):
+    for j in range(0,69):
+        if (i==j):
+            continue
+        xk.append([xa1[i],xp[i],xa[j]])
+        xk.append([xa1[i],xp[i],xp[j]])
+xk=np.array(xk)
+xa=xk[:,0,:,:,:]
+xp=xk[:,1,:,:,:]
+xn=xk[:,2,:,:,:]
+print(xa.shape,xp.shape,xn.shape)
     
 xa=np.array(xa)/255
 xp=np.array(xp)/255
@@ -54,31 +68,25 @@ print(y)
 
 model1 = keras.Sequential(
     [
-        Conv2D(32, (7, 7), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(56, (7, 7), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(64, (7, 5), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(96, (7, 4), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(112, (7, 4), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(128, (2, 2), strides = (1, 1),padding='Valid',kernel_initializer = glorot_uniform(seed=0)),
-        BatchNormalization(axis = 3),
-        Activation('relu'),
+        Conv2D(12, (3, 3), strides = (1, 1),padding='valid',activation='selu',kernel_initializer = glorot_uniform(seed=0)),
+        BatchNormalization(axis = 3,trainable=False),
+        AveragePooling2D((2, 2)),
+        Conv2D(25, (3, 3), strides = (1, 1),padding='valid',activation='selu',kernel_initializer = glorot_uniform(seed=0)),
+        BatchNormalization(axis = 3,trainable=False),
+        AveragePooling2D((2, 2)),
+        Conv2D(51, (3, 3), strides = (1, 1),padding='Valid',activation='selu',kernel_initializer = glorot_uniform(seed=0)),
+        BatchNormalization(axis = 3,trainable=False),
+        AveragePooling2D((2, 2)),
+        AveragePooling2D((2, 2)),
+        Conv2D(102, (4, 4), strides = (1, 1),padding='Valid',activation='selu',kernel_initializer = glorot_uniform(seed=0)),
+        BatchNormalization(axis = 3,trainable=False),
+        AveragePooling2D((2, 2)),
+        Conv2D(204, (4, 4), strides = (1, 1),padding='Valid',activation='selu',kernel_initializer = glorot_uniform(seed=0)),
+        BatchNormalization(axis = 3,trainable=False),
+        AveragePooling2D((2, 2)),
         Flatten(),
-        Dense(128, activation='sigmoid'),
+        Dense(512, activation='tanh'),
+        Dense(256,activation='sigmoid')
     ]
 )
 
@@ -106,6 +114,7 @@ def kloss(y_true,y_pred):
     l3=loss1-loss2+0.9
     l=K.mean(K.maximum(0.0,l3))
     return l
+
 opt=Adam(learning_rate=0.0001,
     beta_1=0.9,
     beta_2=0.999,
@@ -115,11 +124,11 @@ model.compile(optimizer=opt,loss=kloss)
 
 model.fit([xa,xp,xn],y,epochs=100)
 
-ytest=model.predict([xt,xt,xt])
-yanchor=model.predict([xa,xa,xa])
+ytest=model.predict([xt1,xt1,xt1])
+yanchor=model.predict([xa1,xa1,xa1])
 
-ytest=ytest[:,0:128]
-yanchor=yanchor[:,0:128]
+ytest=ytest[:,0:256]
+yanchor=yanchor[:,0:256]
 
 m=10
 n=0
